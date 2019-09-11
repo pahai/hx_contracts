@@ -1,0 +1,61 @@
+type Storage = {
+  participant: Array<string>,
+  amount: Array<number>
+}
+
+var M = Contract<Storage>()
+
+
+function M:init()
+  self.storage.participant = []
+  self.storage.amount = []
+end  
+
+function M:on_deposit(num:number) 
+  local in_list = false
+  let user:string = caller_address 
+  for k,v in ipairs(self.storage.participant) do
+    if user == v then
+      in_list = true
+      self.storage.amount[k] = self.storage.amount[k] + num
+    end
+  end
+
+  if in_list == false then   
+    self.storage.participant[#self.storage.participant+1] = user
+    self.storage.amount[#self.storage.amount+1] = num
+  end  
+  print('ok')
+end  
+
+function M:withdraw(num:number)
+  let user:string = caller_address
+  local in_list = false
+  for k,v in ipairs(self.storage.participant) do
+    if user == v then
+      in_list = true
+      if num <= self.storage.amount[k] then
+        transfer_from_contract_to_address(user,'HX',tointeger(num))
+        self.storage.amount[k] = self.storage.amount[k] - num
+      else
+        return error('no enough money!')
+      end
+    end
+  end
+  
+  if in_list == false then
+    return error('no such user')
+  end  
+end
+
+function M:get_balance()
+  let user:string = caller_address
+  for k,v in ipairs(self.storage.participant) do
+    if v == user then
+      let balance = self.storage.amount[k]
+      pprint(balance)
+    end
+  end
+end
+
+return M
